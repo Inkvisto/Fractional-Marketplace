@@ -20,7 +20,7 @@ fn process_instruction(
 #[cfg(test)]
 mod test {
     use borsh::{BorshDeserialize};
-    use crate::instructions::FractionalizeNFTArgs;
+    use crate::instructions::{FractionalizeNFTArgs, LockNFTArgs};
     use crate::processor::FractionalMarketplaceInstruction;
     use solana_program::{
         account_info::AccountInfo,
@@ -44,7 +44,8 @@ mod test {
         match deserialized {
             FractionalMarketplaceInstruction::Fractionalize(deserialized_args) => {
                 assert_eq!(deserialized_args.total_shares, 7);
-            }
+            },
+            _ => println!("{:?}", deserialized),
         }
     }
 
@@ -75,6 +76,39 @@ mod test {
             total_shares: 7,
         };
         let instruction = FractionalMarketplaceInstruction::Fractionalize(args);
+        let instruction_data = borsh::to_vec(&instruction).unwrap();
+
+        // Call process_instruction
+        let res = process_instruction(&owner, &accounts, &instruction_data);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_lock_instruction() {
+        // Prepare dummy accounts
+        let key = Pubkey::new_unique();
+        let mut lamports = 0;
+        let mut data = vec![0u8; 100]; // enough space for test
+        let owner = Pubkey::new_unique();
+
+        let account = AccountInfo::new(
+            &key,
+            false, // not signer
+            true,  // writable
+            &mut lamports,
+            &mut data,
+            &owner,
+            false,
+            Epoch::default(),
+        );
+
+        let accounts = vec![account];
+
+        // Prepare instruction data
+        let args = LockNFTArgs {
+            vault_bump: 7
+        };
+        let instruction = FractionalMarketplaceInstruction::Lock(args);
         let instruction_data = borsh::to_vec(&instruction).unwrap();
 
         // Call process_instruction
