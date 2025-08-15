@@ -61,5 +61,5 @@ async fn test_helloworld() {
     );
     let (mut banks_client, payer, recent_blockhash) = program_test.start().await;
 
-    println!("Zhopa");
+    println!("Test run was successfull");
 }
