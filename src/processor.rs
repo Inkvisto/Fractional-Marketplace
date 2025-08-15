@@ -15,7 +15,7 @@ pub enum FractionalMarketplaceInstruction {
 }
 
 pub fn process_instruction(
-    _program_id: &Pubkey,
+    program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
@@ -23,6 +23,6 @@ pub fn process_instruction(
 
     match instruction {
         FractionalMarketplaceInstruction::Fractionalize(args) => fractionalize_nft(accounts, args),
-        FractionalMarketplaceInstruction::Lock(args) => lock_nft(accounts, args),
+        FractionalMarketplaceInstruction::Lock(args) => lock_nft(program_id, accounts, args),
     }
 }
