@@ -19,7 +19,7 @@ use {
 pub struct LockNFTArgs {}
 
 pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo], args: LockNFTArgs) -> ProgramResult {
-    msg!("Lock NFT with vault bump");
+    msg!("Lock NFT");
 
     let account_info_iter = &mut accounts.iter();
 
