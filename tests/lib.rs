@@ -1,6 +1,3 @@
-use Fractional_Marketplace::{
-    instructions::{lock::LockNFTArgs},
-};
 use solana_program_test::*;
 use solana_sdk::{instruction::{AccountMeta, Instruction}, pubkey::Pubkey, signature::Signer, system_instruction, system_program, transaction::Transaction};
 use solana_sdk::program_pack::Pack;
@@ -127,7 +124,7 @@ async fn test_lock_nft() {
     let (pda_nft_token_account, _bump) = Pubkey::find_program_address(&[b"nft-lock"], &program_id);
 
     // 5️⃣ Prepare lock_nft instruction
-    let args = FractionalMarketplaceInstruction::Lock(LockNFTArgs {});
+    let args = FractionalMarketplaceInstruction::Lock;
     let data = borsh::to_vec(&args).unwrap();
 
     let accounts = vec![
@@ -162,5 +159,18 @@ async fn test_lock_nft() {
         .expect("PDA account not found");
 
     let token_account = TokenAccount::unpack(&pda_account.data).unwrap();
+
+    let user_nft_token_account = banks_client
+        .get_account(user_nft_token_account)
+        .await
+        .expect("Associated token account not found")
+        .unwrap();
+
+    // Unpack the account as a token account
+    let user_nft_token_account = TokenAccount::unpack(&user_nft_token_account.data)
+        .expect("Failed to unpack token account");
+
     assert_eq!(token_account.amount, 1);
+    // Checking that NFT was transferred from user NFT token account
+    assert_eq!(user_nft_token_account.amount, 0);
 }

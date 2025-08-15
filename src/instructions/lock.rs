@@ -15,10 +15,10 @@ use {
     spl_token::instruction as token_instruction
 };
 
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct LockNFTArgs {}
+// #[derive(BorshSerialize, BorshDeserialize, Debug)]
+// pub struct LockNFTArgs {}
 
-pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo], args: LockNFTArgs) -> ProgramResult {
+pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     msg!("Lock NFT");
 
     let account_info_iter = &mut accounts.iter();
