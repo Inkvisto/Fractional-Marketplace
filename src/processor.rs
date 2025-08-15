@@ -20,12 +20,7 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let instruction = FractionalMarketplaceInstruction::try_from_slice(instruction_data);
-
-    let instruction = instruction.unwrap_or_else(|err| {
-        msg!("Error in deserialization: {}", err);
-        FractionalMarketplaceInstruction::Lock(LockNFTArgs {})
-    });
+    let instruction = FractionalMarketplaceInstruction::try_from_slice(instruction_data)?;
 
     match instruction {
         FractionalMarketplaceInstruction::Fractionalize(args) => fractionalize_nft(accounts, args),

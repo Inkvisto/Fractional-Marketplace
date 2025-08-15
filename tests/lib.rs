@@ -5,6 +5,7 @@ use solana_program_test::*;
 use solana_sdk::{instruction::{AccountMeta, Instruction}, pubkey::Pubkey, signature::Signer, system_instruction, system_program, transaction::Transaction};
 use solana_sdk::program_pack::Pack;
 use solana_sdk::signature::Keypair;
+use Fractional_Marketplace::processor::FractionalMarketplaceInstruction;
 
 #[tokio::test]
 async fn test_lock_nft() {
@@ -126,7 +127,7 @@ async fn test_lock_nft() {
     let (pda_nft_token_account, _bump) = Pubkey::find_program_address(&[b"nft-lock"], &program_id);
 
     // 5️⃣ Prepare lock_nft instruction
-    let args = LockNFTArgs {};
+    let args = FractionalMarketplaceInstruction::Lock(LockNFTArgs {});
     let data = borsh::to_vec(&args).unwrap();
 
     let accounts = vec![
