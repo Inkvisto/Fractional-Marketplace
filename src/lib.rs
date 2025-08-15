@@ -105,9 +105,7 @@ mod test {
         let accounts = vec![account];
 
         // Prepare instruction data
-        let args = LockNFTArgs {
-            vault_bump: 7
-        };
+        let args = LockNFTArgs {};
         let instruction = FractionalMarketplaceInstruction::Lock(args);
         let instruction_data = borsh::to_vec(&instruction).unwrap();
 

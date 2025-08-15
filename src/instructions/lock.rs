@@ -16,12 +16,10 @@ use {
 };
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct LockNFTArgs {
-    pub vault_bump: u8,
-}
+pub struct LockNFTArgs {}
 
 pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo], args: LockNFTArgs) -> ProgramResult {
-    msg!("Lock NFT with vault bump {}", args.vault_bump);
+    msg!("Lock NFT with vault bump");
 
     let account_info_iter = &mut accounts.iter();
 
@@ -40,13 +38,14 @@ pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo], args: LockNFTArgs
         msg!("PDA account mismatch");
         return Err(ProgramError::InvalidArgument);
     }
-
     // Create PDA token account if it doesn't exist
     if pda_nft_token_account.data_is_empty() {
-        let rent = Rent::get()?;
+        let rent = &Rent::from_account_info(rent_sysvar)?;
+
         let space = spl_token::state::Account::LEN;
         let lamports = rent.minimum_balance(space);
 
+        msg!("Create account");
         invoke_signed(
             &system_instruction::create_account(
                 user.key,
@@ -63,6 +62,7 @@ pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo], args: LockNFTArgs
             &[&[b"nft-lock", &[bump]]],
         )?;
 
+        msg!("Initialize account");
         invoke(
             &token_instruction::initialize_account(
                 token_program.key,
@@ -78,6 +78,7 @@ pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo], args: LockNFTArgs
             ],
         )?;
 
+        msg!("NFT transfer");
         // Transfer NFT (amount = 1)
         invoke(
             &token_instruction::transfer(
