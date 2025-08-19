@@ -1,5 +1,10 @@
+use mpl_utils::{
+    assert_owner_in,
+    assert_signer,
+    cmp_pubkeys,
+    token::SPL_TOKEN_PROGRAM_IDS
+};
 use {
-    borsh::{BorshDeserialize, BorshSerialize},
     solana_program::{
         account_info::{AccountInfo, next_account_info},
         msg,
@@ -8,15 +13,13 @@ use {
         program::{invoke, invoke_signed},
         program_error::ProgramError,
         system_instruction,
+        system_program,
         sysvar::Sysvar,
         rent::Rent,
         program_pack::Pack
     },
     spl_token::instruction as token_instruction
 };
-
-// #[derive(BorshSerialize, BorshDeserialize, Debug)]
-// pub struct LockNFTArgs {}
 
 pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     msg!("Lock NFT");
@@ -30,6 +33,19 @@ pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
     let token_program = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
     let rent_sysvar = next_account_info(account_info_iter)?;
+
+    // signers
+
+    assert_signer(user)?;
+
+    // ownership
+
+    assert_owner_in(mint_account, &SPL_TOKEN_PROGRAM_IDS, ProgramError::IncorrectProgramId)?;
+
+    // key match
+
+    assert_keys_equal(system_program.key, &system_program::ID)?;
+    assert_keys_equal(token_program.key, &spl_token::id())?;
 
     // Derive PDA
     let (pda, bump) = Pubkey::find_program_address(&[b"nft-lock"], program_id);
@@ -102,4 +118,14 @@ pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
     }
 
     Ok(())
+}
+
+pub fn assert_keys_equal(key1: &Pubkey, key2: &Pubkey) -> Result<(), ProgramError> {
+    if !cmp_pubkeys(key1, key2) {
+        // In Metaplex in this case the MetadataError::KeyMismatch error is being thrown
+        // I tried to find something similar in ProgramError
+        Err(ProgramError::IllegalOwner)
+    } else {
+        Ok(())
+    }
 }
