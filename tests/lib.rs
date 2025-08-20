@@ -13,7 +13,7 @@ use spl_token::{
     ID as TOKEN_PROGRAM_ID,
 };
 
-const PROGRAM_ID: &str = "HUmJGJvqTVAJ9MeJRCJhL93FmaTpBUz1JzMTMdEwPVAM";
+const PROGRAM_ID: &str = "4151GZf1bL7agehHVJZxUdVH8nhdzP9Fy3WqHAvdytpc";
 
 #[tokio::test]
 async fn test_lock_nft() {
@@ -343,7 +343,14 @@ async fn test_lock_deployed() {
     let user_balance = client.get_token_account_balance(&user_ata).unwrap();
 
     println!("User ATA balance: {:?}", user_balance);
+    // Assert that the user has 0 tokens after locking
+    // Last time this test failed because User had 1 token and PDA had also one token
+    // For now I don't understand why
+    assert_eq!(user_balance.amount.parse::<u64>().unwrap(), 0);
 
-    let pda_balance = client.get_token_account_balance(&pda_nft_account);
+    let pda_balance = client.get_token_account_balance(&pda_nft_account).unwrap();
     println!("PDA ATA balance: {:?}", pda_balance);
+
+    // Assert that the PDA now holds 1 token
+    assert_eq!(pda_balance.amount.parse::<u64>().unwrap(), 1);
 }

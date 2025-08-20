@@ -4,12 +4,13 @@ name = "Fractional-Marketplace"
 version = "0.1.0"
 edition = "2024"
 
+# remove solana client when compiling smart contract with cargo sbf
 [dependencies]
 borsh = "1.5.7"
 mpl-utils = "0.4.1"
 borsh-derive = "1.5.7"
-solana-program = "2.3.0"
 solana-client = "2.3.7"
+solana-program = "2.3.0"
 spl-token = { version = "8.0.0", features = ["no-entrypoint"] }
 spl-associated-token-account = "7.0.0"
 
