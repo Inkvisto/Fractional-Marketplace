@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use spl_associated_token_account::processor;
+use spl_associated_token_account::{get_associated_token_address, processor};
 use solana_program_test::*;
 use solana_sdk::{instruction::{AccountMeta, Instruction}, pubkey::Pubkey, signature::Signer, system_instruction, system_program, transaction::Transaction};
 use solana_sdk::program_pack::Pack;
@@ -7,6 +7,13 @@ use solana_sdk::signature::{read_keypair_file, Keypair};
 use Fractional_Marketplace::instructions::FractionalizeNFTArgs;
 use Fractional_Marketplace::processor::FractionalMarketplaceInstruction;
 use solana_client::rpc_client::RpcClient;
+use spl_token::{
+    instruction as token_instruction,
+    state::Mint,
+    ID as TOKEN_PROGRAM_ID,
+};
+
+const PROGRAM_ID: &str = "HUmJGJvqTVAJ9MeJRCJhL93FmaTpBUz1JzMTMdEwPVAM";
 
 #[tokio::test]
 async fn test_lock_nft() {
@@ -180,14 +187,14 @@ async fn test_lock_nft() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn test_deployed_program() {
+async fn test_fractionalize_deployed() {
     let client = RpcClient::new("http://127.0.0.1:8899".to_string());
 
     // Load payer
     let payer = read_keypair_file("/home/misha/.config/solana/id.json").unwrap();
 
     // Program ID from `solana program deploy`
-    let program_id = Pubkey::from_str("HUmJGJvqTVAJ9MeJRCJhL93FmaTpBUz1JzMTMdEwPVAM").unwrap();
+    let program_id = Pubkey::from_str(PROGRAM_ID).unwrap();
 
     let args = FractionalMarketplaceInstruction::Fractionalize(FractionalizeNFTArgs {
         total_shares: 7,
@@ -213,4 +220,130 @@ async fn test_deployed_program() {
     );
 
     client.send_and_confirm_transaction(&tx).unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_lock_deployed() {
+    let client = RpcClient::new("http://127.0.0.1:8899".to_string());
+
+    // Load payer
+    let payer = read_keypair_file("/home/misha/.config/solana/id.json").unwrap();
+
+    // Program ID from `solana program deploy`
+    let program_id = Pubkey::from_str(PROGRAM_ID).unwrap();
+
+    // 3. Create NFT mint (decimals = 0, supply = 1)
+    let mint = Keypair::new();
+    let rent = client.get_minimum_balance_for_rent_exemption(Mint::LEN).unwrap();
+
+    let create_mint_ix = solana_sdk::system_instruction::create_account(
+        &payer.pubkey(),
+        &mint.pubkey(),
+        rent,
+        Mint::LEN as u64,
+        &TOKEN_PROGRAM_ID,
+    );
+
+    let init_mint_ix = token_instruction::initialize_mint(
+        &TOKEN_PROGRAM_ID,
+        &mint.pubkey(),
+        &payer.pubkey(), // mint authority
+        None,            // freeze authority
+        0,               // decimals
+    )
+        .unwrap();
+
+    let blockhash = client.get_latest_blockhash().unwrap();
+    let tx = Transaction::new_signed_with_payer(
+        &[create_mint_ix, init_mint_ix],
+        Some(&payer.pubkey()),
+        &[&payer, &mint],
+        blockhash,
+    );
+    client.send_and_confirm_transaction(&tx).unwrap();
+
+    println!("Created NFT mint: {}", mint.pubkey());
+
+    // 4. Create user's ATA
+    let user_ata = get_associated_token_address(&payer.pubkey(), &mint.pubkey());
+    let create_ata_ix = spl_associated_token_account::instruction::create_associated_token_account(
+        &payer.pubkey(),
+        &payer.pubkey(),
+        &mint.pubkey(),
+        &TOKEN_PROGRAM_ID,
+    );
+
+    let blockhash = client.get_latest_blockhash().unwrap();
+    let tx = Transaction::new_signed_with_payer(
+        &[create_ata_ix],
+        Some(&payer.pubkey()),
+        &[&payer],
+        blockhash,
+    );
+    client.send_and_confirm_transaction(&tx).unwrap();
+
+    println!("Created user ATA: {}", user_ata);
+
+    // 5. Mint 1 NFT into user ATA
+    let mint_to_ix = token_instruction::mint_to(
+        &TOKEN_PROGRAM_ID,
+        &mint.pubkey(),
+        &user_ata,
+        &payer.pubkey(),
+        &[],
+        1,
+    )
+        .unwrap();
+
+    let blockhash = client.get_latest_blockhash().unwrap();
+    let tx = Transaction::new_signed_with_payer(
+        &[mint_to_ix],
+        Some(&payer.pubkey()),
+        &[&payer],
+        blockhash,
+    );
+    client.send_and_confirm_transaction(&tx).unwrap();
+
+    println!("Minted NFT to user ATA");
+
+    // 6. Derive PDA for lock account
+    let program_id = Pubkey::from_str(PROGRAM_ID).unwrap();
+    let (pda_nft_account, _bump) = Pubkey::find_program_address(&[b"nft-lock"], &program_id);
+
+    let args = FractionalMarketplaceInstruction::Lock;
+    let data = borsh::to_vec(&args).unwrap();
+
+    // 7. Call lock_nft instruction
+    let ix = Instruction {
+        program_id,
+        accounts: vec![
+            AccountMeta::new(payer.pubkey(), true), // signer
+            AccountMeta::new(user_ata, false),      // source
+            AccountMeta::new(pda_nft_account, false), // destination
+            AccountMeta::new_readonly(mint.pubkey(), false),
+            AccountMeta::new_readonly(TOKEN_PROGRAM_ID, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+            AccountMeta::new_readonly(solana_sdk::sysvar::rent::id(), false),
+        ],
+        data,
+    };
+
+    let blockhash = client.get_latest_blockhash().unwrap();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&payer.pubkey()),
+        &[&payer],
+        blockhash,
+    );
+    client.send_and_confirm_transaction(&tx).unwrap();
+
+    println!("lock_nft executed!");
+
+    // 8. Verify balances
+    let user_balance = client.get_token_account_balance(&user_ata).unwrap();
+
+    println!("User ATA balance: {:?}", user_balance);
+
+    let pda_balance = client.get_token_account_balance(&pda_nft_account);
+    println!("PDA ATA balance: {:?}", pda_balance);
 }
