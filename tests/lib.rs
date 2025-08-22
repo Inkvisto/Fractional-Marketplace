@@ -343,6 +343,14 @@ async fn test_lock_deployed() {
     let user_balance = client.get_token_account_balance(&user_ata).unwrap();
 
     println!("User ATA balance: {:?}", user_balance);
+    // TODO: Fix "test_lock_deployed" test it must test that User ATA balance is 0 and PDA ATA balance is 1 after executing lock instruction
+    // TODO: Understand why test is not working sometimes. After solana-test-validator --reset it works
+    // So when blockchain is fresh and smart contract is deployed it works.
+    // Then when I run test for the second time I'm receiving
+    // User ATA balance: UiTokenAmount { ui_amount: Some(1.0), decimals: 0, amount: "1", ui_amount_string: "1" }
+    // But I'm expecting to receive User ATA balance 0
+
+
     // Assert that the user has 0 tokens after locking
     // Last time this test failed because User had 1 token and PDA had also one token
     // For now I don't understand why
