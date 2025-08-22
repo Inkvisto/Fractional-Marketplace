@@ -48,7 +48,10 @@ pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
     assert_keys_equal(token_program.key, &spl_token::id())?;
 
     // Derive PDA
-    let (pda, bump) = Pubkey::find_program_address(&[b"nft-lock"], program_id);
+    let (pda, bump) = Pubkey::find_program_address(
+        &[b"nft-lock", mint_account.key.as_ref()],
+        program_id
+    );
 
     if pda != *pda_nft_token_account.key {
         msg!("PDA account mismatch");
@@ -75,7 +78,7 @@ pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
                 pda_nft_token_account.clone(),
                 system_program.clone(),
             ],
-            &[&[b"nft-lock", &[bump]]],
+            &[&[b"nft-lock", mint_account.key.as_ref(), &[bump]]],
         )?;
 
         msg!("Initialize account");
