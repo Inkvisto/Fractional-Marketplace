@@ -1,4 +1,3 @@
-use solana_program::msg;
 use {
     borsh::{BorshDeserialize, BorshSerialize},
     solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey},

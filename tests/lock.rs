@@ -1,10 +1,21 @@
 use std::str::FromStr;
-use spl_associated_token_account::{get_associated_token_address, processor};
+use spl_associated_token_account::{
+    get_associated_token_address
+};
 use solana_program_test::*;
-use solana_sdk::{instruction::{AccountMeta, Instruction}, pubkey::Pubkey, signature::Signer, system_instruction, system_program, transaction::Transaction};
+use solana_sdk::{
+    instruction::{
+    AccountMeta,
+    Instruction
+    },
+    pubkey::Pubkey,
+    signature::Signer,
+    system_program,
+    transaction::Transaction
+};
 use solana_sdk::program_pack::Pack;
 use solana_sdk::signature::{read_keypair_file, Keypair};
-use Fractional_Marketplace::instructions::FractionalizeNFTArgs;
+use spl_token::state::Account as TokenAccount;
 use Fractional_Marketplace::processor::FractionalMarketplaceInstruction;
 use solana_client::rpc_client::RpcClient;
 use spl_token::{
@@ -12,22 +23,10 @@ use spl_token::{
     state::Mint,
     ID as TOKEN_PROGRAM_ID,
 };
-use crate::PROGRAM_ID;
+use crate::config::AppConfig;
 
 #[tokio::test]
 async fn test() {
-    use solana_program::{
-        pubkey::Pubkey,
-        system_program,
-    };
-    use solana_sdk::{
-        signature::{Keypair, Signer},
-        transaction::Transaction,
-        instruction::{Instruction, AccountMeta},
-    };
-    use spl_token::state::Account as TokenAccount;
-    use spl_associated_token_account;
-
     // Program ID
     let program_id = Pubkey::new_unique();
 
@@ -38,22 +37,22 @@ async fn test() {
     let mint_pubkey = mint.pubkey();
 
     // Start ProgramTest
-    let mut program_test = ProgramTest::new(
+    let program_test = ProgramTest::new(
         "Fractional-Marketplace",
         program_id,
         processor!(Fractional_Marketplace::processor::process_instruction),
     );
 
-    let (mut banks_client, payer, recent_blockhash) = program_test.start().await;
+    let (banks_client, payer, recent_blockhash) = program_test.start().await;
 
     // 1️⃣ Create mint account
     let rent = banks_client.get_rent().await.unwrap();
-    let mint_rent = rent.minimum_balance(spl_token::state::Mint::LEN);
+    let mint_rent = rent.minimum_balance(Mint::LEN);
     let create_mint_ix = solana_program::system_instruction::create_account(
         &payer.pubkey(),
         &mint_pubkey,
         mint_rent,
-        spl_token::state::Mint::LEN as u64,
+        Mint::LEN as u64,
         &spl_token::id(),
     );
     let init_mint_ix = spl_token::instruction::initialize_mint(
@@ -190,13 +189,13 @@ async fn test() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_deployed() {
-    let client = RpcClient::new("http://127.0.0.1:8899".to_string());
+    let app_config = AppConfig::new("tests/config.toml")
+        .expect("Config should be set");
+
+    let client = RpcClient::new(app_config.solana.rpc_client_url);
 
     // Load payer
-    let payer = read_keypair_file("/home/misha/.config/solana/id.json").unwrap();
-
-    // Program ID from `solana program deploy`
-    let program_id = Pubkey::from_str(PROGRAM_ID).unwrap();
+    let payer = read_keypair_file(app_config.solana.keypair_file_directory).unwrap();
 
     // 3. Create NFT mint (decimals = 0, supply = 1)
     let mint = Keypair::new();
@@ -273,7 +272,8 @@ async fn test_deployed() {
     println!("Minted NFT to user ATA");
 
     // 6. Derive PDA for lock account
-    let program_id = Pubkey::from_str(PROGRAM_ID).unwrap();
+
+    let program_id = Pubkey::from_str(&app_config.program.program_id).unwrap();
     let (pda_nft_account, _bump) = Pubkey::find_program_address(
         &[b"nft-lock", mint.pubkey().as_ref()],
         &program_id

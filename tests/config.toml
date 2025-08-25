@@ -1,0 +1,6 @@
+[program]
+program_id = "4151GZf1bL7agehHVJZxUdVH8nhdzP9Fy3WqHAvdytpc"
+
+[solana]
+keypair_file_directory = "/home/misha/.config/solana/id.json"
+rpc_client_url = "http://127.0.0.1:8899"
