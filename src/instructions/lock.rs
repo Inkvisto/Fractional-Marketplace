@@ -40,7 +40,7 @@ pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
 
     // Derive PDA
 
-    let (lock_authority_pda, bump) = Pubkey::find_program_address(
+    let (lock_authority_pda, _bump) = Pubkey::find_program_address(
         &[b"nft-lock", asset_account.key.as_ref()],
         program_id
     );

@@ -18,6 +18,7 @@ dependencies = [
  "solana-sdk",
  "spl-associated-token-account",
  "spl-token 8.0.0",
+ "tokio",
 ]
 
 [[package]]
