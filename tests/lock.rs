@@ -40,7 +40,7 @@ async fn test_deployed() {
 
     let mpl_core_program_id = Pubkey::from_str(&app_config.program.mpl_core_program_id)
         .expect("Failed to create mpl_core_program_id");
-
+    // TODO: Understand if it is the correct way to set localnet deployed version of mpl_core program id
     create_ix.program_id = mpl_core_program_id;
 
     let recent_blockhash = client.get_latest_blockhash().unwrap();
