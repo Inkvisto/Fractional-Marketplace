@@ -4,6 +4,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct Program {
     pub program_id: String,
+    pub mpl_core_program_id: String,
 }
 
 #[derive(Debug, Deserialize)]

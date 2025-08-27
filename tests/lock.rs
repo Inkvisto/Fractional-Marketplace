@@ -51,13 +51,16 @@ async fn test_deployed() {
     let program_id = Pubkey::from_str(&app_config.program.program_id)
         .expect("Failed to create program id");
 
+    let mpl_core_program_id = Pubkey::from_str(&app_config.mpl_core_program_id)
+        .expect("Failed to create mpl_core_program_id");
+
     let lock_ix = Instruction {
         program_id,
         accounts: vec![
             AccountMeta::new(payer.pubkey(), true),      // user
             AccountMeta::new(asset.pubkey(), false),     // asset account
             AccountMeta::new(collection.pubkey(), false),// collection
-            AccountMeta::new_readonly(mpl_core::ID, false), // mpl core
+            AccountMeta::new_readonly(mpl_core_program_id, false), // mpl core
             AccountMeta::new_readonly(SYSTEM_PROGRAM_ID, false), // system program
         ],
         data: vec![],
