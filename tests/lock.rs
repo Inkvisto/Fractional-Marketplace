@@ -29,7 +29,7 @@ async fn test_deployed() {
     let collection = Keypair::new();
 
     // 1️⃣ Create the NFT
-    let create_ix = CreateV1Builder::new()
+    let mut create_ix = CreateV1Builder::new()
         .asset(asset.pubkey())
         .payer(payer.pubkey())
         .update_authority(Some(payer.pubkey()))
@@ -37,6 +37,11 @@ async fn test_deployed() {
         .name("My Test NFT".to_string())
         .uri("https://example.com/nft.json".to_string())
         .instruction();
+
+    let mpl_core_program_id = Pubkey::from_str(&app_config.program.mpl_core_program_id)
+        .expect("Failed to create mpl_core_program_id");
+
+    create_ix.program_id = mpl_core_program_id;
 
     let recent_blockhash = client.get_latest_blockhash().unwrap();
     let tx_create = Transaction::new_signed_with_payer(
@@ -50,9 +55,6 @@ async fn test_deployed() {
     // 2️⃣ Lock the NFT into PDA
     let program_id = Pubkey::from_str(&app_config.program.program_id)
         .expect("Failed to create program id");
-
-    let mpl_core_program_id = Pubkey::from_str(&app_config.mpl_core_program_id)
-        .expect("Failed to create mpl_core_program_id");
 
     let lock_ix = Instruction {
         program_id,

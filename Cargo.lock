@@ -12,11 +12,13 @@ dependencies = [
  "mpl-core",
  "mpl-utils",
  "serde",
+ "solana-client",
  "solana-program",
  "solana-program-test",
  "solana-sdk",
  "spl-associated-token-account",
  "spl-token 8.0.0",
+ "tokio",
 ]
 
 [[package]]
