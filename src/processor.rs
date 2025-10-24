@@ -6,13 +6,15 @@ use {
 
 use crate::instructions::{
     fractionalize::{fractionalize_nft, FractionalizeNFTArgs},
-    lock::{lock_nft},
+    lock::lock_nft,
+    nft::{create_asset, create_simple_nft, verify_nft_creation, NftMetadata},
 };
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum FractionalMarketplaceInstruction {
     Fractionalize(FractionalizeNFTArgs),
-    Lock
+    Lock,
+    Nft(NftMetadata),
 }
 
 pub fn process_instruction(
@@ -25,5 +27,9 @@ pub fn process_instruction(
     match instruction {
         FractionalMarketplaceInstruction::Fractionalize(args) => fractionalize_nft(accounts, args),
         FractionalMarketplaceInstruction::Lock => lock_nft(program_id, accounts),
+        FractionalMarketplaceInstruction::Nft(metadata) => {
+            msg!("NFT creation instruction received: {:?}", metadata);
+            Ok(())
+        }
     }
 }
