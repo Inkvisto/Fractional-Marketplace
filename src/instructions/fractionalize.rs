@@ -14,7 +14,7 @@ pub struct FractionalizeNFTArgs {
     pub total_shares: u64
 }
 
-pub fn fractionalize_nft(accounts: &[AccountInfo], args: FractionalizeNFTArgs) -> ProgramResult {
+pub fn fractionalize_nft(_accounts: &[AccountInfo], args: FractionalizeNFTArgs) -> ProgramResult {
     msg!("fractionalize_nft with pubkey {} to such number of shares: {}", args.nft_mint, args.total_shares);
 
     Ok(())

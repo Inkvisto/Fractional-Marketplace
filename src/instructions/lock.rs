@@ -1,121 +1,68 @@
-use mpl_utils::{
-    assert_owner_in,
-    assert_signer,
-    cmp_pubkeys,
-    token::SPL_TOKEN_PROGRAM_IDS
-};
 use {
     solana_program::{
         account_info::{AccountInfo, next_account_info},
         msg,
         entrypoint::ProgramResult,
         pubkey::Pubkey,
-        program::{invoke, invoke_signed},
+        program::{invoke},
         program_error::ProgramError,
-        system_instruction,
-        system_program,
-        sysvar::Sysvar,
-        rent::Rent,
-        program_pack::Pack
+        system_program::ID as SYSTEM_PROGRAM_ID,
     },
-    spl_token::instruction as token_instruction
+    mpl_utils::{
+        assert_signer,
+        cmp_pubkeys,
+    },
+    mpl_core::{
+        instructions::{TransferV1Builder},
+        ID as MPL_CORE_ID
+    }
 };
 
 pub fn lock_nft(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-    msg!("Lock NFT");
+    msg!("Lock NFT using MPL Core");
 
     let account_info_iter = &mut accounts.iter();
 
-    let user = next_account_info(account_info_iter)?; // NFT owner
-    let user_nft_token_account = next_account_info(account_info_iter)?; // Source token account
-    let pda_nft_token_account = next_account_info(account_info_iter)?; // Destination PDA token account
-    let mint_account = next_account_info(account_info_iter)?;
-    let token_program = next_account_info(account_info_iter)?;
+    let user = next_account_info(account_info_iter)?; // Current owner/authority
+    let asset_account = next_account_info(account_info_iter)?; // MPL Core Asset account
+    let collection_account = next_account_info(account_info_iter)?; // Collection (optional)
+    let mpl_core_program = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
-    let rent_sysvar = next_account_info(account_info_iter)?;
 
     // signers
 
     assert_signer(user)?;
 
-    // ownership
-
-    assert_owner_in(mint_account, &SPL_TOKEN_PROGRAM_IDS, ProgramError::IncorrectProgramId)?;
-
     // key match
 
-    assert_keys_equal(system_program.key, &system_program::ID)?;
-    assert_keys_equal(token_program.key, &spl_token::id())?;
+    assert_keys_equal(mpl_core_program.key, &MPL_CORE_ID)?;
+    assert_keys_equal(system_program.key, &SYSTEM_PROGRAM_ID)?;
 
     // Derive PDA
-    let (pda, bump) = Pubkey::find_program_address(&[b"nft-lock"], program_id);
 
-    if pda != *pda_nft_token_account.key {
-        msg!("PDA account mismatch");
-        return Err(ProgramError::InvalidArgument);
-    }
-    // Create PDA token account if it doesn't exist
-    if pda_nft_token_account.data_is_empty() {
-        let rent = &Rent::from_account_info(rent_sysvar)?;
+    let (lock_authority_pda, _bump) = Pubkey::find_program_address(
+        &[b"nft-lock", asset_account.key.as_ref()],
+        program_id
+    );
 
-        let space = spl_token::state::Account::LEN;
-        let lamports = rent.minimum_balance(space);
+    let transfer_ix = TransferV1Builder::new()
+        .asset(*asset_account.key)
+        .collection(Some(*collection_account.key))
+        .payer(*user.key)
+        .authority(Some(*user.key))
+        .new_owner(lock_authority_pda)
+        .instruction();
 
-        msg!("Create account");
-        invoke_signed(
-            &system_instruction::create_account(
-                user.key,
-                pda_nft_token_account.key,
-                lamports,
-                space as u64,
-                token_program.key,
-            ),
-            &[
-                user.clone(),
-                pda_nft_token_account.clone(),
-                system_program.clone(),
-            ],
-            &[&[b"nft-lock", &[bump]]],
-        )?;
-
-        msg!("Initialize account");
-        invoke(
-            &token_instruction::initialize_account(
-                token_program.key,
-                pda_nft_token_account.key,
-                mint_account.key,
-                &pda,
-            )?,
-            &[
-                pda_nft_token_account.clone(),
-                mint_account.clone(),
-                rent_sysvar.clone(),
-                token_program.clone(),
-            ],
-        )?;
-
-        msg!("NFT transfer");
-        // Transfer NFT (amount = 1)
-        invoke(
-            &token_instruction::transfer(
-                token_program.key,
-                user_nft_token_account.key,
-                pda_nft_token_account.key,
-                user.key,
-                &[],
-                1,
-            )?,
-            &[
-                user_nft_token_account.clone(),
-                pda_nft_token_account.clone(),
-                user.clone(),
-                token_program.clone(),
-            ],
-        )?;
-
-        msg!("NFT locked in PDA account");
-
-    }
+    invoke(
+        &transfer_ix,
+        &[
+            asset_account.clone(),
+            collection_account.clone(),
+            user.clone(),
+            mpl_core_program.clone(),
+            system_program.clone(),
+        ],
+    )?;
 
     Ok(())
 }
